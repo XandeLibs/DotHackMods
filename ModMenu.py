@@ -16,15 +16,27 @@ def ApplyPatch():
         tk.messagebox.showerror("Error", "Folder does not contain necessary game files")
         return
 
-    if originalxp:
-        xp = bytearray(b'\x96\x00\x00\x00\x91\x00\x00\x00\x8c\x00\x00\x00\x87\x00\x00\x00\x82\x00\x00\x00\x7d\x00\x00\x00\x78\x00\x00\x00\x73\x00\x00\x00\x64\x00\x00\x00\x55\x00\x00\x00\x4b\x00\x00\x00\x41\x00\x00\x00\x2d\x00\x00\x00\x14\x00\x00\x00\x0a\x00\x00\x00\x07\x00\x00\x00\x05\x00\x00\x00\x04\x00\x00\x00\x03')
-    else:
-        xp = bytearray(b'\xc3\x00\x00\x00\xbd\x00\x00\x00\xb6\x00\x00\x00\xb0\x00\x00\x00\xa9\x00\x00\x00\xa3\x00\x00\x00\x9c\x00\x00\x00\x96\x00\x00\x00\x82\x00\x00\x00\x6f\x00\x00\x00\x62\x00\x00\x00\x55\x00\x00\x00\x3b\x00\x00\x00\x1a\x00\x00\x00\x0d\x00\x00\x00\x0a\x00\x00\x00\x08\x00\x00\x00\x06\x00\x00\x00\x04')
-
+    xp = bytearray()
     xpOffset = 0x7d4cc0, 0x8fb2d0, 0x9fa140, 0x9d9260
     lvlScaleAddress = 0x48f695, 0x56b5f5, 0x5744c1, 0x557cb1
-    lvlScaleInstructions = bytearray(b'\xF3\x41\x0F\x59\xD8')
-    
+
+    # Create xp array table
+    if originalxp:
+        xpvalue = ["96", "91", "8c", "87", "82", "7d", "78", "73", "64", "55", "4b", "41", "2d", "14", "0a", "07", "05", "04", "03"]
+        for value in xpvalue:
+            xp += bytearray(bytes.fromhex(value + "000000"))
+    else:
+        xpvalue = ["c3", "bd", "b6", "b0", "a9", "a3", "9c", "96", "82", "6f", "62", "55", "3b", "1a", "0d", "0a", "08", "06", "04"]
+        for value in xpvalue:
+            xp += bytearray(bytes.fromhex(value + "000000"))
+
+    # Create lvlScale array
+    if noLvlScale.get() == True:
+        lvlScaleInstructions = bytearray(b'\x90\x90\x90\x90\x90')
+    else:
+        lvlScaleInstructions = bytearray(b'\xF3\x41\x0F\x59\xD8')
+
+    # Apply patch
     for i in range(1, 5):
         filePath = folderPath + "/hackGU_vol" + str(i) + ".dll"
 
@@ -33,15 +45,13 @@ def ApplyPatch():
         file.write(xp)
 
         file.seek(lvlScaleAddress[i-1])
-        if noLvlScale.get() == True:
-            file.write(b"\x90\x90\x90\x90\x90")
-        else:
-            file.write(lvlScaleInstructions)
+        file.write(lvlScaleInstructions)
         
     file.close()
 
     tk.messagebox.showinfo("Done", "Patch applied successfully")
 
+# Browse for game folder
 def Browse(textbox):
     Path = tk.filedialog.askdirectory()
 
@@ -59,14 +69,17 @@ def OpenSaveFile(saveFilePath: tk.StringVar ,stats):
 def ReadSaveFile(saveFile, stats):
     saveFile.seek(0x5c0)
 
+    # Reads HP and SP
     stats[0] = int.from_bytes(saveFile.read(2), byteorder="little")
     saveFile.seek(0x5c4)
     stats[1] = int.from_bytes(saveFile.read(2), byteorder="little")
     saveFile.seek(0x5c8)
     
+    # Reads remaining stats
     for i in range(2, 12):
         stats[i] = int.from_bytes(saveFile.read(2), byteorder="little")
 
+    # Updates stats entry
     for i in range(0, 12):
         statsEntry[i].delete(0, tk.END)
         statsEntry[i].insert(tk.END, stats[i])
@@ -76,11 +89,13 @@ def SaveStats(saveFilePath: tk.StringVar, stats):
         saveFile = open(saveFilePath.get(), "r+b")
         saveFile.seek(0x5c0)
 
+        # Writes HP and SP
         saveFile.write(int(statsEntry[0].get()).to_bytes(2, byteorder="little"))
         saveFile.seek(0x5c4)
         saveFile.write(int(statsEntry[1].get()).to_bytes(2, byteorder="little"))
         saveFile.seek(0x5c8)
 
+        # Writes remaining stats
         for i in range(2, 12):
             saveFile.write(int(statsEntry[i].get()).to_bytes(2, byteorder="little"))
 
