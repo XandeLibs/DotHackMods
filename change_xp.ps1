@@ -30,7 +30,16 @@ for ($i = 1; $i -lt 5; $i++) {
   $file = [System.IO.File]::ReadAllBytes($path)
 
   for ($j = 0; $j -lt $xpOriginal.Count; $j++) {
-    $file[$xpOffset[$i-1] + $step*$j] = $xpOriginal[$j] * $xpmulti
+      $offset = $xpOffset[$i-1] + $step * $j
+      $newXp = [int]($xpOriginal[$j] * $xpmulti)
+      if ($newXp -lt 1) {
+          $newXp = 1
+      }
+      
+      $file[$offset]     = $newXp -band 0xFF
+      $file[$offset + 1] = 0
+      $file[$offset + 2] = 0
+      $file[$offset + 3] = 0
   }
 
   if ($dmg_scale -eq "y"){
